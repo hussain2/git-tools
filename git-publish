@@ -1,0 +1,24 @@
+#!/bin/bash
+
+target=${1:-staging}
+
+host=$(git remote get-url $target | sed -e 's/:.*//')
+dir=$(git remote get-url $target | sed -e 's/[^:]*://')
+
+deployment_ref=deployment_ref
+
+echo puplishing to $target at $host:$dir
+
+git fetch $target \
+&& git tag -f $deployment_ref \
+&& git push -f $target $deployment_ref \
+&& git tag -d $deployment_ref \
+&& ssh -Tq $host "
+  set -x
+  cd $dir
+  git -c advice.detachedHead=false checkout $deployment_ref \
+  && git branch -f master $deployment_ref \
+  && git checkout master
+  git tag -d $deployment_ref
+"
+
